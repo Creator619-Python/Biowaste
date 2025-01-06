@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waste Sorting Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+        }
+        .game-container {
+            margin-top: 20px;
+        }
+        .score-timer {
+            font-size: 20px;
+            margin: 10px;
+        }
+        .waste-item img {
+            width: 200px;
+            height: 200px;
+        }
+        .bins img {
+            width: 100px;
+            height: 100px;
+            cursor: pointer;
+        }
+        .bin-container {
+            display: inline-block;
+            margin: 10px;
+        }
+        .feedback {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+        .new-game-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>Waste Sorting Game</h1>
+
+        <div class="score-timer">
+            <span id="score">Score: {{ score }}</span>
+            <span id="time-left">Time left: {{ time_left }}s</span>
+        </div>
+
+        <div class="waste-item">
+            <h2>Sort the waste item:</h2>
+            <!-- Ensure correct URL using url_for -->
+            <img id="waste-item" src="{{ url_for('static', filename='images/' + waste_items[selected_item]) }}" alt="Waste Item">
+        </div>
+
+        <div class="bins">
+            <h2>Bins:</h2>
+            {% for bin_name, bin_image in bins.items() %}
+            <div class="bin-container">
+                <button class="bin-button" data-bin="{{ bin_name }}">
+                    <!-- Ensure correct URL for bin images -->
+                    <img src="{{ url_for('static', filename='images/' + bin_image) }}" alt="{{ bin_name }}">
+                </button>
+                <p>{{ bin_name }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="feedback">
+            <p id="feedback">{{ feedback }}</p>
+        </div>
+
+        <button class="new-game-btn" id="new-game-btn">New Game</button>
+    </div>
+
+    <script>
+        // JavaScript code to handle bin selection
+        document.querySelectorAll('.bin-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const binName = button.getAttribute('data-bin');
+                
+                fetch('/sort/' + binName, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.game_over) {
+                        document.getElementById('time-left').textContent = "Game Over!";
+                        document.getElementById('feedback').textContent = data.feedback;
+                    } else {
+                        // Update score, feedback, and waste item image
+                        document.getElementById('score').textContent = 'Score: ' + data.score;
+                        document.getElementById('feedback').textContent = data.feedback;
+                        // Update the waste item image dynamically
+                        document.getElementById('waste-item').src = "/static/images/" + data.selected_item;
+                    }
+                });
+            });
+        });
+
+        // Timer function
+        function updateTimer() {
+            fetch('/update', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.game_over) {
+                        document.getElementById('time-left').textContent = "Game Over!";
+                        document.getElementById('feedback').textContent = data.feedback;
+                    } else {
+                        document.getElementById('time-left').textContent = 'Time left: ' + data.time_left + 's';
+                    }
+                });
+        }
+
+        // Start timer
+        setInterval(updateTimer, 1000);
+
+        // New Game Button
+        document.getElementById('new-game-btn').addEventListener('click', function() {
+            fetch('/new_game', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    // Reset score, feedback, and waste item
+                    document.getElementById('score').textContent = 'Score: ' + data.score;
+                    document.getElementById('time-left').textContent = 'Time left: ' + data.time_left + 's';
+                    document.getElementById('feedback').textContent = data.feedback;
+                    document.getElementById('waste-item').src = "/static/images/" + data.selected_item;
+                });
+        });
+    </script>
+
+</body>
+</html>
